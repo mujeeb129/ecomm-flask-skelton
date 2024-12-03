@@ -100,16 +100,80 @@ def products():
     if authenticated:
         products = Products.query.all()
         products_list = [
-            {"id": p.id, "name": p.name, "price": p.price, "description": p.description}
+            {"id": p.id, "name": p.name, "price": p.price}
             for p in products
         ]
         return jsonify({"products": products_list})
     return jsonify({"message": "Please login"})
 
+
+
+@app.route('/admin/products', methods=['POST'])
+def create_product():
+    data = request.get_json()
+    new_product = Products(
+        name=data['name'],
+        price=data['price'],
+        description=data['description'],
+        stock=data['stock']
+    )
+    db.session.add(new_product)
+    db.session.commit()
+    return jsonify({'message': 'Product created', 'product': new_product.id}), 201
+
+# Retrieve a single product by ID
+@app.route('/admin/products/<int:id>', methods=['GET'])
+def get_product(id):
+    product = Products.query.get_or_404(id)
+    return jsonify({
+        'id': product.id,
+        'name': product.name,
+        'price': product.price,
+        'description': product.description,
+        'stock': product.stock
+    })
+
+# List all products
+@app.route('/admin/products', methods=['GET'])
+def list_products():
+    products = Products.query.all()
+    products_list = [
+        {
+            'id': product.id,
+            'name': product.name,
+            'price': product.price,
+            'description': product.description,
+            'stock': product.stock
+        }
+        for product in products
+    ]
+    return jsonify(products_list)
+
+# Update an existing product
+@app.route('/admin/products/<int:id>', methods=['PUT'])
+def update_product(id):
+    product = Products.query.get_or_404(id)
+    data = request.get_json()
+    product.name = data.get('name', product.name)
+    product.price = data.get('price', product.price)
+    product.description = data.get('description', product.description)
+    product.stock = data.get('stock', product.stock)
+    db.session.commit()
+    return jsonify({'message': 'Product updated'})
+
+# Delete a product
+@app.route('/products/<int:id>', methods=['DELETE'])
+def delete_product(id):
+    product = Products.query.get_or_404(id)
+    db.session.delete(product)
+    db.session.commit()
+    return jsonify({'message': 'Product deleted'})
+
+
 @app.route("/cart", methods=["GET", "POST", "DELETE"])
 def cart():
     authenticated, user = is_authenticated()
-    if not user:
+    if authenticated:
         return jsonify({"error": "Unauthorized"}), 401
 
     if request.method == "GET":
