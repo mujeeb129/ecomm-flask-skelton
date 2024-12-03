@@ -110,6 +110,9 @@ def products():
 
 @app.route('/admin/products', methods=['POST'])
 def create_product():
+    authenticated, user = is_authenticated()
+    if not authenticated:
+        return jsonify({"error": "Unauthorized"}), 401
     data = request.get_json()
     new_product = Products(
         name=data['name'],
@@ -124,6 +127,9 @@ def create_product():
 # Retrieve a single product by ID
 @app.route('/admin/products/<int:id>', methods=['GET'])
 def get_product(id):
+    authenticated, user = is_authenticated()
+    if not authenticated:
+        return jsonify({"error": "Unauthorized"}), 401
     product = Products.query.get_or_404(id)
     return jsonify({
         'id': product.id,
@@ -136,6 +142,9 @@ def get_product(id):
 # List all products
 @app.route('/admin/products', methods=['GET'])
 def list_products():
+    authenticated, user = is_authenticated()
+    if not authenticated:
+        return jsonify({"error": "Unauthorized"}), 401
     products = Products.query.all()
     products_list = [
         {
@@ -152,6 +161,9 @@ def list_products():
 # Update an existing product
 @app.route('/admin/products/<int:id>', methods=['PUT'])
 def update_product(id):
+    authenticated, user = is_authenticated()
+    if not authenticated:
+        return jsonify({"error": "Unauthorized"}), 401
     product = Products.query.get_or_404(id)
     data = request.get_json()
     product.name = data.get('name', product.name)
@@ -164,6 +176,9 @@ def update_product(id):
 # Delete a product
 @app.route('/products/<int:id>', methods=['DELETE'])
 def delete_product(id):
+    authenticated, user = is_authenticated()
+    if not authenticated:
+        return jsonify({"error": "Unauthorized"}), 401
     product = Products.query.get_or_404(id)
     db.session.delete(product)
     db.session.commit()
