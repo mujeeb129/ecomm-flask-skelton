@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, make_response
+from werkzeug.security import generate_password_hash, check_password_hash
 from src import app, db
 from src.models import User, Products, Cart
 
@@ -17,22 +18,43 @@ def home():
         
     return jsonify({"message": f"Not authenticated"}), 403
 
+from werkzeug.security import generate_password_hash, check_password_hash
+
+@app.route("/login", methods=['POST'])
+def login():
+    data = request.json
+    if not data or not all(k in data for k in ("email", "password")):
+        return jsonify({"error": "Missing required fields"}), 400
+
+    user = User.query.filter_by(email=data["email"]).first()
+    if user and check_password_hash(user.password, data["password"]):
+        response = make_response(jsonify({"message": "Login successful"}))
+        response.set_cookie("email", user.email, httponly=True)
+        return response
+
+    return jsonify({"error": "Invalid credentials"}), 401
+
+
 @app.route("/register", methods=['POST'])
 def register():
     data = request.json
     if not data or not all(k in data for k in ("lastname", "firstname", "email", "password")):
         return jsonify({"error": "Missing required fields"}), 400
 
+    # Hash the password before storing it
+    hashed_password = generate_password_hash(data['password'], method='sha256')
+
     user = User(
         lastname=data["lastname"],
         firstname=data["firstname"],
         email=data["email"],
-        password=data['password'],
+        password=hashed_password,
         user_type='consumer'
     )
     db.session.add(user)
     db.session.commit()
     return jsonify({"message": "Account created successfully"}), 201
+
 
 @app.route("/admin/load", methods=['GET'])
 def load_admin():
@@ -49,19 +71,6 @@ def load_admin():
         db.session.commit()
     return jsonify({"email":"admin@test.com", "password": "password"}), 201
 
-@app.route("/login", methods=['POST'])
-def login():
-    data = request.json
-    if not data or not all(k in data for k in ("email", "password")):
-        return jsonify({"error": "Missing required fields"}), 400
-
-    user = User.query.filter_by(email=data["email"], password=data["password"]).first()
-    if user:
-        response = make_response(jsonify({"message": "Login successful"}))
-        response.set_cookie("email", user.email, httponly=True)
-        return response
-
-    return jsonify({"error": "Invalid credentials"}), 401
 
 @app.route("/logout", methods=["POST"])
 def logout():
